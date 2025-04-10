@@ -109,8 +109,15 @@ const AssociationDashboard = () => {
                 voyageData
             );
             console.log('Response from editing voyage:', response.data);
+            
+            // Update the local state with the updated voyage
+            setVoyages(voyages.map(voyage => 
+                voyage._id === selectedVoyage._id 
+                    ? { ...voyage, ...response.data.voyage }
+                    : voyage
+            ));
+            
             toast.success('Voyage updated successfully');
-            setVoyages(response.data.association.voyages);
             setIsEditVoyageModalOpen(false);
             setSelectedVoyage(null);
         } catch (error) {

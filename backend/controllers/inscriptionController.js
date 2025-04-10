@@ -115,18 +115,34 @@ module.exports.updateInscription = async (req, res) => {
             return res.status(400).json({ message: "Statut invalide." });
         }
 
+        // Get the current inscription to check its previous status
+        const currentInscription = await Inscription.findById(id);
+        if (!currentInscription) {
+            return res.status(404).json({ message: "Inscription non trouvée." });
+        }
+
+        // If the booking is being rejected, restore the available places
+        if (statut === "Refusé") {
+            const voyage = await Voyage.findById(currentInscription.voyage);
+            if (voyage) {
+                voyage.placesDisponible += currentInscription.nombrePersonnes;
+                await voyage.save();
+            }
+        }
+
+        // Update the inscription status
         const updatedInscription = await Inscription.findByIdAndUpdate(
             id,
             { statut },
             { new: true, runValidators: true }
         );
 
-        if (!updatedInscription) {
-            return res.status(404).json({ message: "Inscription non trouvée." });
-        }
-
-        res.status(200).json({ message: "Inscription mise à jour avec succès.", inscription: updatedInscription });
+        res.status(200).json({ 
+            message: "Inscription mise à jour avec succès.", 
+            inscription: updatedInscription 
+        });
     } catch (error) {
+        console.error('Error in updateInscription:', error);
         res.status(500).json({ message: error.message });
     }
 };

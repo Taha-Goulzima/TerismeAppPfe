@@ -78,16 +78,29 @@ module.exports.createAvis = async (req, res) => {
             return res.status(404).json({ message: "Voyage not found." });
         }
 
-        // Check if user has an accepted booking
-        const hasBooking = await Inscription.findOne({
+        // Check if user has any booking for this voyage
+        const userBooking = await Inscription.findOne({
             voyage: voyageId,
-            utilisateur: userId,
-            statut: 'Accepté'
+            utilisateur: userId
         });
 
-        if (!hasBooking) {
+        if (!userBooking) {
             return res.status(403).json({ 
-                message: "You need to have an accepted booking to leave a review." 
+                message: "You need to have a booking to leave a review." 
+            });
+        }
+
+        // Check if the booking was rejected
+        if (userBooking.statut === 'Rejeté') {
+            return res.status(403).json({ 
+                message: "You cannot leave a review for a rejected booking." 
+            });
+        }
+
+        // Check if the booking was accepted
+        if (userBooking.statut !== 'Accepté') {
+            return res.status(403).json({ 
+                message: "You can only leave a review for accepted bookings." 
             });
         }
 
@@ -99,7 +112,7 @@ module.exports.createAvis = async (req, res) => {
 
         if (existingReview) {
             return res.status(400).json({ 
-                message: "You have already reviewed this tour." 
+                message: "You have already reviewed this voyage." 
             });
         }
 
@@ -112,9 +125,19 @@ module.exports.createAvis = async (req, res) => {
         });
 
         await newAvis.save();
-        res.status(201).json({ message: "Review added successfully.", avis: newAvis });
+
+        // Populate the review with user and voyage details
+        const populatedAvis = await Avis.findById(newAvis._id)
+            .populate('utilisateur', 'nom')
+            .populate('voyage', 'destination');
+
+        res.status(201).json({ 
+            message: "Review created successfully", 
+            avis: populatedAvis 
+        });
     } catch (error) {
-        res.status(500).json({ message: "Server error.", error: error.message });
+        console.error("Error in createAvis:", error);
+        res.status(500).json({ message: "Error creating review" });
     }
 };
 

@@ -52,7 +52,7 @@ module.exports.createAssociation = async (req, res) => {
  */
 module.exports.getAllAssociations = async (req, res) => {
   try {
-    const associations = await Association.find().populate("voyages"); // Inclure les voyages liés
+    const associations = await Association.find({ status: 'active' }).populate("voyages"); // Only get active associations
     res.status(200).json({ associations });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -262,14 +262,16 @@ module.exports.updateVoyage = async (req, res) => {
       return res.status(404).json({ message: "Voyage not found." });
     }
 
-    // Update the voyage
+    // Update the voyage with all fields
     const updatedVoyage = await Voyage.findByIdAndUpdate(
       voyageId,
       {
         destination: voyageData.destination,
         prix: voyageData.prix,
-        date: voyageData.date,
-        duree: voyageData.duree,
+        dateDeDepart: voyageData.dateDeDepart,
+        dateDeRetour: voyageData.dateDeRetour,
+        placesDisponible: voyageData.placesDisponible,
+        photo: voyageData.photo,
         description: voyageData.description
       },
       { new: true }

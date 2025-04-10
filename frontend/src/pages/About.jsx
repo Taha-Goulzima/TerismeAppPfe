@@ -12,7 +12,7 @@ function About() {
           backgroundAttachment: 'fixed'
         }}
       >
-        <h2 className="text-4xl font-bold mb-4">ABOUT US</h2>
+        <h2 className="text-4xl font-bold mb-4">test</h2>
         <p className="text-xl mt-4 font-semibold max-w-2xl px-4">YOUR JOURNEY BEGINS WITH OUR EXPERTISE</p>
       </section>
 
