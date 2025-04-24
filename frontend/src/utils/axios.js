@@ -24,12 +24,21 @@ axiosInstance.interceptors.request.use(
 // Add a response interceptor to handle errors
 axiosInstance.interceptors.response.use(
     (response) => response,
-    (error) => {
-        if (error.response?.status === 401) {
-            // Handle unauthorized access
+    async (error) => {
+        const originalRequest = error.config;
+
+        // If the error is due to an expired token (401) and we haven't tried to refresh yet
+        if (error.response?.status === 401 && !originalRequest._retry) {
+            originalRequest._retry = true;
+
+            // Clear the token and user data
             localStorage.removeItem('token');
+            localStorage.removeItem('user');
+
+            // Redirect to login page
             window.location.href = '/login';
         }
+
         return Promise.reject(error);
     }
 );

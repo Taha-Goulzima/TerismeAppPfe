@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../context/AuthContext';
+import { toast } from 'react-toastify';
+import api from '../utils/axios';
 
 function Profile() {
   const navigate = useNavigate();
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { user, setUser, updateUserData } = useAuth();
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -14,73 +16,93 @@ function Profile() {
     email: '',
     phone: ''
   });
-  const [updateMessage, setUpdateMessage] = useState('');
+  const [selectedFile, setSelectedFile] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!token) {
+    if (!token || !user) {
       navigate('/login');
       return;
     }
 
-    // Get user data from localStorage
-    const userData = JSON.parse(localStorage.getItem('user'));
-    if (userData) {
-      setUser(userData);
-      setFormData({
-        nom: userData.nom,
-        email: userData.email,
-        phone: userData.phone
-      });
-      setLoading(false);
-    }
-  }, [navigate]);
-
-  const handleChange = (e) => {
     setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
+      nom: user.nom,
+      email: user.email,
+      phone: user.phone
     });
+  }, [navigate, user]);
+
+  const handleFileSelect = (event) => {
+    const file = event.target.files[0];
+    if (file && file.type.startsWith('image/')) {
+      setSelectedFile(file);
+      handleUpload(file);
+    } else {
+      toast.error('Please select an image file');
+    }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleUpload = async (file) => {
+    if (!file) {
+      toast.error('Please select a file first');
+      return;
+    }
+
+    setLoading(true);
+    const formData = new FormData();
+    formData.append('profilePicture', file);
+
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.put(
-        `http://localhost:5000/user/${user._id}`,
+      await api.put(
+        `/user/${user._id}/profile-picture`,
         formData,
         {
           headers: {
-            'Authorization': `Bearer ${token}`
+            'Content-Type': 'multipart/form-data'
           }
         }
       );
 
-      // Update local storage with new user data
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-      setUser(response.data.user);
-      setUpdateMessage('Profile updated successfully!');
-      setIsEditing(false);
-
-      // Clear success message after 3 seconds
-      setTimeout(() => {
-        setUpdateMessage('');
-      }, 3000);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update profile');
+      // Update user data in context and localStorage
+      await updateUserData();
+      toast.success('Profile picture updated successfully');
+    } catch (error) {
+      console.error('Error uploading profile picture:', error);
+      toast.error(error.response?.data?.message || 'Error uploading profile picture');
+    } finally {
+      setLoading(false);
+      setSelectedFile(null);
     }
   };
 
-  if (loading) return (
-    <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-orange-50 to-white">
-      <motion.div
-        animate={{ rotate: 360 }}
-        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-        className="w-16 h-16 border-4 border-orange-400 border-t-transparent rounded-full"
-      />
-    </div>
-  );
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await api.put(
+        `/user/${user._id}`,
+        formData
+      );
+
+      // Update user data in context and localStorage
+      await updateUserData();
+      toast.success('Profile updated successfully');
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast.error(error.response?.data?.message || 'Error updating profile');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex justify-center items-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-white py-12 px-4">
@@ -101,13 +123,25 @@ function Profile() {
                 transition={{ delay: 0.2 }}
                 className="relative w-32 h-32 mx-auto"
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-orange-400 to-orange-500 rounded-full animate-pulse" />
-                <div className="absolute inset-2 bg-white rounded-full flex items-center justify-center">
-                  <span className="text-5xl font-bold text-orange-500">
-                    {user.nom.charAt(0).toUpperCase()}
-                  </span>
+                <div className="relative w-32 h-32">
+                  <img
+                    src={user?.profilePicture ? `http://localhost:5000${user.profilePicture}` : '/default-profile.png'}
+                    alt="Profile"
+                    className="w-32 h-32 rounded-full object-cover border-4 border-white"
+                  />
+                  <label className="absolute bottom-0 right-0 bg-orange-500 text-white p-2 rounded-full cursor-pointer hover:bg-orange-600 transition-colors">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleFileSelect}
+                      disabled={loading}
+                    />
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                    </svg>
+                  </label>
                 </div>
-                <div className="absolute -bottom-2 -right-2 w-6 h-6 bg-green-500 rounded-full border-4 border-white" />
               </motion.div>
             </div>
           </div>
@@ -123,17 +157,6 @@ function Profile() {
                   className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-r-lg"
                 >
                   {error}
-                </motion.div>
-              )}
-              
-              {updateMessage && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="mb-6 p-4 bg-green-50 border-l-4 border-green-500 text-green-700 rounded-r-lg"
-                >
-                  {updateMessage}
                 </motion.div>
               )}
 
@@ -152,8 +175,9 @@ function Profile() {
                         type="text"
                         name="nom"
                         value={formData.nom}
-                        onChange={handleChange}
+                        onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
                         className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all duration-200"
+                        disabled={loading}
                       />
                     </div>
 
@@ -163,8 +187,9 @@ function Profile() {
                         type="email"
                         name="email"
                         value={formData.email}
-                        onChange={handleChange}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all duration-200"
+                        disabled={loading}
                       />
                     </div>
 
@@ -174,8 +199,9 @@ function Profile() {
                         type="tel"
                         name="phone"
                         value={formData.phone}
-                        onChange={handleChange}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                         className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all duration-200"
+                        disabled={loading}
                       />
                     </div>
                   </div>
@@ -186,8 +212,9 @@ function Profile() {
                       whileTap={{ scale: 0.98 }}
                       type="submit"
                       className="flex-1 bg-gradient-to-r from-orange-400 to-orange-500 text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all duration-300"
+                      disabled={loading}
                     >
-                      Save Changes
+                      {loading ? 'Saving...' : 'Save Changes'}
                     </motion.button>
                     <motion.button
                       whileHover={{ scale: 1.02 }}
@@ -202,6 +229,7 @@ function Profile() {
                         });
                       }}
                       className="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-200 transition-all duration-300"
+                      disabled={loading}
                     >
                       Cancel
                     </motion.button>
@@ -215,8 +243,8 @@ function Profile() {
                   className="space-y-8"
                 >
                   <div className="text-center">
-                    <h2 className="text-2xl font-bold text-gray-800">{user.nom}</h2>
-                    <p className="text-gray-500 capitalize">{user.role}</p>
+                    <h2 className="text-2xl font-bold text-gray-800">{user?.nom}</h2>
+                    <p className="text-gray-500 capitalize">{user?.role}</p>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -228,7 +256,7 @@ function Profile() {
                         <span className="material-icons text-orange-500">email</span>
                         <h3 className="font-medium text-gray-700">Email</h3>
                       </div>
-                      <p className="text-gray-600">{user.email}</p>
+                      <p className="text-gray-600">{user?.email}</p>
                     </motion.div>
 
                     <motion.div
@@ -239,7 +267,7 @@ function Profile() {
                         <span className="material-icons text-orange-500">phone</span>
                         <h3 className="font-medium text-gray-700">Phone</h3>
                       </div>
-                      <p className="text-gray-600">{user.phone}</p>
+                      <p className="text-gray-600">{user?.phone}</p>
                     </motion.div>
                   </div>
 
@@ -248,6 +276,7 @@ function Profile() {
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setIsEditing(true)}
                     className="w-full bg-gradient-to-r from-orange-400 to-orange-500 text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all duration-300"
+                    disabled={loading}
                   >
                     Edit Profile
                   </motion.button>

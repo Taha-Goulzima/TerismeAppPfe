@@ -11,11 +11,22 @@ function NavBar() {
     const [showDropdown, setShowDropdown] = useState(false)
     const dropdownRef = useRef(null)
     const { isAuthenticated, logout, user } = useAuth()
+    const [authStatus, setAuthStatus] = useState(false)
     
     const handleLogout = () => {
         logout();
+        setAuthStatus(false);
         navigate('/');
     };
+
+    useEffect(() => {
+        const checkAuthStatus = async () => {
+            const authenticated = await isAuthenticated();
+            setAuthStatus(authenticated);
+        };
+        
+        checkAuthStatus();
+    }, [isAuthenticated]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -89,7 +100,7 @@ function NavBar() {
 
                     {/* Auth Buttons & Profile */}
                     <div className="flex items-center space-x-4">
-                        {isAuthenticated() ? (
+                        {authStatus ? (
                             <div className="flex items-center space-x-4">
                                 {getDashboardPath() && (
                                     <motion.button
@@ -114,8 +125,12 @@ function NavBar() {
                                         <div className="relative">
                                             <img 
                                                 className="w-10 h-10 rounded-full object-cover ring-2 ring-primary/20" 
-                                                src={assets.profile_pic} 
+                                                src={user?.profilePicture ? `http://localhost:5000${user.profilePicture}` : '/default-profile.png'} 
                                                 alt="Profile" 
+                                                onError={(e) => {
+                                                    e.target.onerror = null;
+                                                    e.target.src = '/default-profile.png';
+                                                }}
                                             />
                                             <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
                                         </div>
@@ -131,7 +146,22 @@ function NavBar() {
                                                 transition={{ duration: 0.2 }}
                                                 className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden"
                                             >
-                                                <div className="p-4 space-y-2">
+                                                <div className="p-4">
+                                                    <div className="flex items-center space-x-3 mb-4 pb-4 border-b border-gray-100">
+                                                        <img 
+                                                            className="w-12 h-12 rounded-full object-cover ring-2 ring-primary/20" 
+                                                            src={user?.profilePicture ? `http://localhost:5000${user.profilePicture}` : '/default-profile.png'} 
+                                                            alt="Profile" 
+                                                            onError={(e) => {
+                                                                e.target.onerror = null;
+                                                                e.target.src = '/default-profile.png';
+                                                            }}
+                                                        />
+                                                        <div>
+                                                            <p className="text-sm font-semibold text-gray-700">{user?.nom}</p>
+                                                            <p className="text-xs text-gray-500">{user?.email}</p>
+                                                        </div>
+                                                    </div>
                                                     {getDashboardPath() && (
                                                         <motion.button
                                                             onClick={() => handleNavigation(getDashboardPath())}
@@ -207,7 +237,25 @@ function NavBar() {
                         className="fixed inset-y-0 right-0 w-64 bg-white shadow-xl md:hidden"
                     >
                         <div className="flex items-center justify-between p-4 border-b">
-                            <img className="w-32" src={assets.logo} alt="Logo" />
+                            {authStatus ? (
+                                <div className="flex items-center space-x-3">
+                                    <img 
+                                        className="w-10 h-10 rounded-full object-cover ring-2 ring-primary/20" 
+                                        src={user?.profilePicture ? `http://localhost:5000${user.profilePicture}` : '/default-profile.png'} 
+                                        alt="Profile" 
+                                        onError={(e) => {
+                                            e.target.onerror = null;
+                                            e.target.src = '/default-profile.png';
+                                        }}
+                                    />
+                                    <div>
+                                        <p className="text-sm font-semibold text-gray-700">{user?.nom}</p>
+                                        <p className="text-xs text-gray-500">{user?.role}</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <img className="w-32" src={assets.logo} alt="Logo" />
+                            )}
                             <motion.button
                                 onClick={() => setShowMenu(false)}
                                 className="p-2 rounded-lg hover:bg-gray-100"
@@ -231,7 +279,7 @@ function NavBar() {
                                     {item.label}
                                 </NavLink>
                             ))}
-                            {isAuthenticated() && getDashboardPath() && (
+                            {authStatus && getDashboardPath() && (
                                 <motion.button
                                     onClick={() => {
                                         handleNavigation(getDashboardPath());
@@ -245,7 +293,7 @@ function NavBar() {
                                     <span>Dashboard</span>
                                 </motion.button>
                             )}
-                            {!isAuthenticated() && (
+                            {!authStatus && (
                                 <motion.button
                                     onClick={() => {
                                         navigate('/login');

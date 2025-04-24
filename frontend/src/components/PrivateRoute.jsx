@@ -1,12 +1,27 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const PrivateRoute = ({ children, allowedRoles }) => {
   const { isAuthenticated, user } = useAuth();
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthorized, setIsAuthorized] = useState(false);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const authenticated = await isAuthenticated();
+      setIsAuthorized(authenticated);
+      setIsLoading(false);
+    };
+    checkAuth();
+  }, [isAuthenticated]);
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
   // If not authenticated, redirect to login
-  if (!isAuthenticated() || !user) {
+  if (!isAuthorized || !user) {
     return <Navigate to="/login" replace />;
   }
 

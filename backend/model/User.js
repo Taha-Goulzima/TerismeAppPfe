@@ -9,6 +9,10 @@ const userSchema = new mongoose.Schema({
         maxlength: 50,
         unique: true
     },
+    profilePicture: {
+        type: String,
+        default: 'default-profile.png'
+    },
     phone: {
         type: String,
         required: true,

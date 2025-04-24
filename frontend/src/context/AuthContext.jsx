@@ -7,22 +7,21 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Function to verify and decode token
-  const verifyToken = (token) => {
+  // Function to verify token with backend
+  const verifyTokenWithBackend = async (token) => {
     try {
-      const decodedToken = JSON.parse(atob(token.split('.')[1]));
-      if (decodedToken.exp * 1000 > Date.now()) {
-        return decodedToken;
-      }
-      return null;
+      const response = await api.get('/user/validate-token', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return response.data.valid;
     } catch (error) {
-      console.error('Token verification error:', error);
-      return null;
+      console.error('Token validation error:', error);
+      return false;
     }
   };
 
   // Function to check authentication status
-  const checkAuth = () => {
+  const checkAuth = async () => {
     const token = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
     
@@ -31,20 +30,26 @@ export const AuthProvider = ({ children }) => {
       return false;
     }
 
-    const decodedToken = verifyToken(token);
-    if (!decodedToken) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      setUser(null);
-      return false;
-    }
-
     try {
-      const userData = JSON.parse(storedUser);
+      // Verify token with backend
+      const response = await api.get('/user/validate-token', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (!response.data.valid) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setUser(null);
+        return false;
+      }
+
+      // Update user data with the latest from server
+      const userData = response.data.user;
+      localStorage.setItem('user', JSON.stringify(userData));
       setUser(userData);
       return true;
     } catch (error) {
-      console.error('Error parsing user data:', error);
+      console.error('Error checking auth:', error);
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       setUser(null);
@@ -53,8 +58,11 @@ export const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    checkAuth();
-    setLoading(false);
+    const initializeAuth = async () => {
+      await checkAuth();
+      setLoading(false);
+    };
+    initializeAuth();
   }, []);
 
   const login = async ({ email, password }) => {
@@ -68,7 +76,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.user));
         setUser(response.data.user);
-        return response;
+        return response.data;
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -82,44 +90,40 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
-  const isAuthenticated = () => {
+  const isAuthenticated = async () => {
     const token = localStorage.getItem('token');
     if (!token) return false;
     
-    const decodedToken = verifyToken(token);
-    if (!decodedToken) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      setUser(null);
-      return false;
-    }
-    
-    return true;
+    return await verifyTokenWithBackend(token);
   };
 
   const getToken = () => {
-    const token = localStorage.getItem('token');
-    if (!token) return null;
-    
-    const decodedToken = verifyToken(token);
-    if (!decodedToken) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      setUser(null);
-      return null;
+    return localStorage.getItem('token');
+  };
+
+  const updateUserData = async () => {
+    try {
+      const token = getToken();
+      if (!token || !user?._id) return;
+
+      const response = await api.get(`/user/${user._id}`);
+      const userData = response.data;
+      localStorage.setItem('user', JSON.stringify(userData));
+      setUser(userData);
+    } catch (error) {
+      console.error('Error updating user data:', error);
     }
-    
-    return token;
   };
 
   const value = {
     user,
+    setUser,
     loading,
     login,
     logout,
     isAuthenticated,
     getToken,
-    api
+    updateUserData
   };
 
   if (loading) {

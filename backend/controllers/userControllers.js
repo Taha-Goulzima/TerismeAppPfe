@@ -22,7 +22,7 @@ module.exports.validateToken = async (req, res) => {
       return res.status(401).json({ message: 'Invalid token' });
     }
 
-    const user = await User.findById(decoded.id);
+    const user = await User.findById(decoded.id).select("-password");
     if (!user) {
       return res.status(401).json({ message: 'User not found' });
     }
@@ -93,7 +93,8 @@ module.exports.registerUser = async (req, res) => {
       email: newUser.email,
       nom: newUser.nom,
       phone: newUser.phone,
-      role: newUser.role
+      role: newUser.role,
+      profilePicture: newUser.profilePicture
     };
 
     return res.status(201).json({ user: userResponse });
@@ -133,7 +134,8 @@ module.exports.loginUser = async (req, res) => {
         nom: user.nom,
         email: user.email,
         role: user.role,
-        phone: user.phone
+        phone: user.phone,
+        profilePicture: user.profilePicture
       }
     });
   } catch (error) {
@@ -180,6 +182,50 @@ module.exports.getAllUsers = async (req, res) => {
   } catch (error) {
     console.error("Error in getAllUsers:", error);
     return res.status(500).json({ message: "Error fetching users" });
+  }
+};
+
+/**
+ * @description recuperrer un utilisateur par son ID
+ * @route /user/:id
+ * @method GET
+ */
+module.exports.getUserById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const token = req.headers.authorization?.split(' ')[1];
+    
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
+    }
+
+    const decoded = deCoderToken(token);
+    // Allow access if user is admin or requesting their own data
+    if (decoded.role !== "admin" && decoded.id !== id) {
+      return res.status(403).json({ message: "Vous n'êtes pas autorisé" });
+    }
+
+    const user = await User.findById(id).select("-password");
+    if (!user) {
+      return res.status(404).json({ message: "Utilisateur non trouvé" });
+    }
+
+    // If user is an association, include association data
+    if (user.role === 'association') {
+      const association = await Association.findOne({ userId: id });
+      if (association) {
+        return res.status(200).json({
+          ...user.toObject(),
+          associationId: association._id,
+          status: association.status
+        });
+      }
+    }
+
+    return res.status(200).json(user);
+  } catch (error) {
+    console.error("Error in getUserById:", error);
+    return res.status(500).json({ message: "Error fetching user" });
   }
 };
 
@@ -266,4 +312,38 @@ module.exports.updateUser = async (req, res) => {
     }
     return res.status(500).json({ message: "Error updating user" });
   }
+};
+
+/**
+ * @description Update user profile picture
+ * @router /user/:id/profile-picture
+ * @method PUT
+ */
+module.exports.updateProfilePicture = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: "No file uploaded" });
+        }
+
+        const { id } = req.params;
+        const profilePicture = `/uploads/profiles/${req.file.filename}`;
+
+        const user = await User.findByIdAndUpdate(
+            id,
+            { profilePicture },
+            { new: true }
+        ).select("-password");
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        res.status(200).json({ 
+            message: "Profile picture updated successfully",
+            user
+        });
+    } catch (error) {
+        console.error("Error updating profile picture:", error);
+        res.status(500).json({ message: "Error updating profile picture" });
+    }
 };

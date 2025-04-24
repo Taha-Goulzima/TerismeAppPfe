@@ -40,68 +40,70 @@ function App() {
       <CssBaseline />
       <AuthProvider>
         <NavBar />
-        <Routes>
-          <Route path="/login" element={<Login />} />
+        <div className="pt-20">
+          <Routes>
+            <Route path="/login" element={<Login />} />
 
-          {/* Admin Routes */}
-          <Route
-            path="/admin/dashboard"
-            element={
-              <PrivateRoute allowedRoles={['admin']}>
-                <AdminDashboard />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/admin/add-association"
-            element={
-              <PrivateRoute allowedRoles={['admin']}>
-                <AddAssociation />
-              </PrivateRoute>
-            }
-          />
+            {/* Admin Routes */}
+            <Route
+              path="/admin/dashboard"
+              element={
+                <PrivateRoute allowedRoles={['admin']}>
+                  <AdminDashboard />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/admin/add-association"
+              element={
+                <PrivateRoute allowedRoles={['admin']}>
+                  <AddAssociation />
+                </PrivateRoute>
+              }
+            />
 
-          {/* Association Routes */}
-          <Route
-            path="/association/dashboard"
-            element={
+            {/* Association Routes */}
+            <Route
+              path="/association/dashboard"
+              element={
+                <PrivateRoute allowedRoles={['association']}>
+                  <AssociationDashboard />
+                </PrivateRoute>
+              }
+            />
+
+            {/* Protected Routes */}
+            <Route
+              path="/profile"
+              element={
+                <PrivateRoute>
+                  <Profile />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/mytours"
+              element={
+                <PrivateRoute>
+                  <MyTours />
+                </PrivateRoute>
+              }
+            />
+
+            {/* Public Routes */}
+            <Route path="/" element={<Home />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/associations" element={<Association />} />
+            <Route path="/association/:id" element={<AssociationDetails />} />
+            <Route path="/tours" element={<Tours />} />
+            <Route path="/tour/:id" element={<TourDetails />} />
+            <Route path="/association/reviews" element={
               <PrivateRoute allowedRoles={['association']}>
-                <AssociationDashboard />
+                <AssociationReviews />
               </PrivateRoute>
-            }
-          />
-
-          {/* Protected Routes */}
-          <Route
-            path="/profile"
-            element={
-              <PrivateRoute>
-                <Profile />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/mytours"
-            element={
-              <PrivateRoute>
-                <MyTours />
-              </PrivateRoute>
-            }
-          />
-
-          {/* Public Routes */}
-          <Route path="/" element={<Home />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/associations" element={<Association />} />
-          <Route path="/association/:id" element={<AssociationDetails />} />
-          <Route path="/tours" element={<Tours />} />
-          <Route path="/tour/:id" element={<TourDetails />} />
-          <Route path="/association/reviews" element={
-            <PrivateRoute allowedRoles={['association']}>
-              <AssociationReviews />
-            </PrivateRoute>
-          } />
-        </Routes>
+            } />
+          </Routes>
+        </div>
         <Footer />
         <ToastContainer position="top-right" autoClose={3000} />
       </AuthProvider>
