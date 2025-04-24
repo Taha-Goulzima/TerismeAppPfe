@@ -21,6 +21,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import AssociationReviews from './pages/AssociationReviews';
+import Community from './pages/Community';
 
 // Create a theme instance
 const theme = createTheme({
@@ -86,6 +87,14 @@ function App() {
               element={
                 <PrivateRoute>
                   <MyTours />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/community"
+              element={
+                <PrivateRoute>
+                  <Community />
                 </PrivateRoute>
               }
             />

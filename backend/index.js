@@ -56,6 +56,7 @@ app.use("/voyages", require("./routes/voyageRoutes"));
 app.use("/association", require("./routes/associationRoutes"));
 app.use("/inscription", require("./routes/inscriptionRoutes"));
 app.use("/avis", require("./routes/avisRoutes"));
+app.use("/messages", require("./routes/messageRoutes"));
 
 // File upload endpoint
 app.post('/upload', upload.single('photo'), (req, res) => {

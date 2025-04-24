@@ -55,7 +55,8 @@ function NavBar() {
         { path: '/', label: 'HOME' },
         { path: '/tours', label: 'TOURS' },
         { path: '/associations', label: 'ASSOCIATIONS' },
-        { path: '/about', label: 'ABOUT' }
+        { path: '/about', label: 'ABOUT' },
+        { path: '/community', label: 'COMMUNITY', protected: true }
     ];
 
     return (
@@ -75,26 +76,28 @@ function NavBar() {
                     {/* Desktop Navigation */}
                     <div className="hidden md:flex items-center space-x-8">
                         {navItems.map((item) => (
-                            <NavLink
-                                key={item.path}
-                                to={item.path}
-                                className={({ isActive }) => `
-                                    relative py-2 text-sm font-medium transition-colors duration-300
-                                    ${isActive ? 'text-primary' : 'text-gray-600 hover:text-primary'}
-                                `}
-                            >
-                                {({ isActive }) => (
-                                    <>
-                                        {item.label}
-                                        <motion.div
-                                            className="absolute bottom-0 left-0 w-full h-0.5 bg-primary"
-                                            initial={{ scaleX: 0 }}
-                                            animate={{ scaleX: isActive ? 1 : 0 }}
-                                            transition={{ duration: 0.3 }}
-                                        />
-                                    </>
-                                )}
-                            </NavLink>
+                            (!item.protected || authStatus) && (
+                                <NavLink
+                                    key={item.path}
+                                    to={item.path}
+                                    className={({ isActive }) => `
+                                        relative py-2 text-sm font-medium transition-colors duration-300
+                                        ${isActive ? 'text-primary' : 'text-gray-600 hover:text-primary'}
+                                    `}
+                                >
+                                    {({ isActive }) => (
+                                        <>
+                                            {item.label}
+                                            <motion.div
+                                                className="absolute bottom-0 left-0 w-full h-0.5 bg-primary"
+                                                initial={{ scaleX: 0 }}
+                                                animate={{ scaleX: isActive ? 1 : 0 }}
+                                                transition={{ duration: 0.3 }}
+                                            />
+                                        </>
+                                    )}
+                                </NavLink>
+                            )
                         ))}
                     </div>
 
