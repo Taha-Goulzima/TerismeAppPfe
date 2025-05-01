@@ -22,6 +22,7 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import AssociationReviews from './pages/AssociationReviews';
 import Community from './pages/Community';
+import Activities from './pages/Activities';
 
 // Create a theme instance
 const theme = createTheme({
@@ -111,6 +112,7 @@ function App() {
                 <AssociationReviews />
               </PrivateRoute>
             } />
+            <Route path="/activities" element={<Activities />} />
           </Routes>
         </div>
         <Footer />

@@ -15,36 +15,23 @@ const Community = () => {
   const [replyingTo, setReplyingTo] = useState(null);
   const [replyContent, setReplyContent] = useState('');
   const messagesEndRef = useRef(null);
+  const shouldScrollRef = useRef(false);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (shouldScrollRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      shouldScrollRef.current = false;
+    }
   };
 
   useEffect(() => {
     const loadInitialMessages = async () => {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          console.error('No authentication token found');
-          setLoading(false);
-          return;
-        }
-
-        const response = await api.get(`/messages?page=${page}&limit=10`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-
-        // Fetch replies for each message
+        const response = await api.get(`/messages?page=${page}&limit=10`);
         const messagesWithReplies = await Promise.all(
           response.data.messages.map(async (message) => {
             try {
-              const repliesResponse = await api.get(`/messages/${message._id}/replies`, {
-                headers: {
-                  Authorization: `Bearer ${token}`
-                }
-              });
+              const repliesResponse = await api.get(`/messages/${message._id}/replies`);
               return {
                 ...message,
                 replies: repliesResponse.data
@@ -66,14 +53,14 @@ const Community = () => {
         console.error('Error fetching messages:', error.response?.data || error.message);
         setLoading(false);
         if (error.response?.status === 401) {
-          localStorage.removeItem('token');
+          // Handle unauthorized access
           window.location.href = '/login';
         }
       }
     };
 
     loadInitialMessages();
-  }, [page]); // Only re-fetch when page changes
+  }, [page]);
 
   useEffect(() => {
     scrollToBottom();
@@ -107,9 +94,11 @@ const Community = () => {
             ...response.data,
             replies: repliesResponse.data
           };
+          shouldScrollRef.current = true;
           setMessages(prevMessages => [newMessageWithReplies, ...prevMessages]);
         } catch (error) {
           console.error('Error fetching replies for new message:', error);
+          shouldScrollRef.current = true;
           setMessages(prevMessages => [response.data, ...prevMessages]);
         }
       }
@@ -123,9 +112,22 @@ const Community = () => {
     try {
       const response = await api.post(`/messages/${messageId}/like`);
       setMessages(prevMessages => 
-        prevMessages.map(msg => 
-          msg._id === messageId ? response.data : msg
-        )
+        prevMessages.map(msg => {
+          // Update the main message if it matches
+          if (msg._id === messageId) {
+            return response.data;
+          }
+          // Update the reply if it matches
+          if (msg.replies) {
+            return {
+              ...msg,
+              replies: msg.replies.map(reply => 
+                reply._id === messageId ? response.data : reply
+              )
+            };
+          }
+          return msg;
+        })
       );
     } catch (error) {
       console.error('Error liking message:', error);

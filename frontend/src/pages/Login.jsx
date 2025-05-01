@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import api from '../utils/axios';
 
 function Login() {
   const [state, setState] = useState('Login');
@@ -14,7 +15,7 @@ function Login() {
   const [loading, setLoading] = useState(false);
   
   const navigate = useNavigate();
-  const { login, api } = useAuth();
+  const { login } = useAuth();
 
   const onSubmitHandler = async (event) => {
     event.preventDefault();

@@ -1,14 +1,14 @@
 import axios from 'axios';
 
-const axiosInstance = axios.create({
+const api = axios.create({
     baseURL: 'http://localhost:5000',
     headers: {
         'Content-Type': 'application/json'
     }
 });
 
-// Add a request interceptor to add the auth token to requests
-axiosInstance.interceptors.request.use(
+// Add a request interceptor
+api.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('token');
         if (token) {
@@ -21,36 +21,26 @@ axiosInstance.interceptors.request.use(
     }
 );
 
-// Add a response interceptor to handle errors
-axiosInstance.interceptors.response.use(
+// Add a response interceptor
+api.interceptors.response.use(
     (response) => response,
-    async (error) => {
-        const originalRequest = error.config;
-
-        // If the error is due to an expired token (401) and we haven't tried to refresh yet
-        if (error.response?.status === 401 && !originalRequest._retry) {
-            originalRequest._retry = true;
-
-            // Clear the token and user data
+    (error) => {
+        if (error.response?.status === 401) {
             localStorage.removeItem('token');
-            localStorage.removeItem('user');
-
-            // Redirect to login page
             window.location.href = '/login';
         }
-
         return Promise.reject(error);
     }
 );
 
 // Ensure the api object has all axios methods
-const api = {
-    ...axiosInstance,
-    get: axiosInstance.get.bind(axiosInstance),
-    post: axiosInstance.post.bind(axiosInstance),
-    put: axiosInstance.put.bind(axiosInstance),
-    delete: axiosInstance.delete.bind(axiosInstance),
-    patch: axiosInstance.patch.bind(axiosInstance)
+const apiObject = {
+    ...api,
+    get: api.get.bind(api),
+    post: api.post.bind(api),
+    put: api.put.bind(api),
+    delete: api.delete.bind(api),
+    patch: api.patch.bind(api)
 };
 
-export default api; 
+export default apiObject; 

@@ -33,28 +33,43 @@ function TourDetails() {
         // Fetch reviews if user is authenticated
         if (isAuthenticated()) {
           const token = getToken();
-          const reviewsResponse = await axios.get(`http://localhost:5000/avis/voyage/${id}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          setReviews(reviewsResponse.data.avis);
+          if (!token) {
+            console.error('No token available');
+            return;
+          }
 
-          // Check if user can review
           try {
-            const inscriptionResponse = await axios.get(`http://localhost:5000/inscription/user`, {
+            const reviewsResponse = await axios.get(`http://localhost:5000/avis/voyage/${id}`, {
               headers: { 'Authorization': `Bearer ${token}` }
             });
-            const userInscription = inscriptionResponse.data.inscriptions.find(
-              ins => ins.voyage._id === id && ins.statut === 'Accepté'
-            );
-            setCanReview(!!userInscription);
-            
-            // Check if user has already reviewed
-            const hasUserReviewed = reviewsResponse.data.avis.some(
-              review => review.utilisateur._id === userInscription?.utilisateur._id
-            );
-            setHasReviewed(hasUserReviewed);
+            setReviews(reviewsResponse.data.avis);
+
+            // Check if user can review
+            const inscriptionResponse = await axios.get(`http://localhost:5000/inscription/user`, {
+              headers: { 
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            });
+
+            if (inscriptionResponse.data && inscriptionResponse.data.inscriptions) {
+              const userInscription = inscriptionResponse.data.inscriptions.find(
+                ins => ins.voyage && ins.voyage._id === id && ins.statut === 'Accepté'
+              );
+              setCanReview(!!userInscription);
+              
+              // Check if user has already reviewed
+              const hasUserReviewed = reviewsResponse.data.avis.some(
+                review => review.utilisateur && review.utilisateur._id === userInscription?.utilisateur?._id
+              );
+              setHasReviewed(hasUserReviewed);
+            }
           } catch (err) {
             console.error('Error checking inscription status:', err);
+            if (err.response?.status === 401) {
+              // Token is invalid or expired
+              navigate('/login');
+            }
             setCanReview(false);
           }
         }
@@ -70,7 +85,7 @@ function TourDetails() {
     };
 
     fetchData();
-  }, [id, isAuthenticated, getToken]);
+  }, [id, isAuthenticated, getToken, navigate]);
 
   // Handle booking
   const handleBooking = async () => {

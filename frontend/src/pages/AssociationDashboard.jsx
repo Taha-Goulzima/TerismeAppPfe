@@ -42,7 +42,7 @@ const AssociationDashboard = () => {
 
                     // Filter inscriptions for this association's voyages
                     const associationInscriptions = inscriptionsResponse.data.inscriptions.filter(
-                        inscription => voyagesArray.some(voyage => voyage._id === inscription.voyage._id)
+                        inscription => inscription.voyage && voyagesArray.some(voyage => voyage && voyage._id === inscription.voyage._id)
                     );
                     setInscriptions(associationInscriptions);
                 } else {
