@@ -104,6 +104,7 @@ module.exports.addVoyageToAssociation = async (req, res) => {
             placesDisponible: voyageData.placesDisponible,
             photo: voyageData.photo,
             description: voyageData.description,
+            activities: voyageData.activities || [],
             associationId: id
         });
 
@@ -272,7 +273,8 @@ module.exports.updateVoyage = async (req, res) => {
         dateDeRetour: voyageData.dateDeRetour,
         placesDisponible: voyageData.placesDisponible,
         photo: voyageData.photo,
-        description: voyageData.description
+        description: voyageData.description,
+        activities: voyageData.activities || []
       },
       { new: true }
     );

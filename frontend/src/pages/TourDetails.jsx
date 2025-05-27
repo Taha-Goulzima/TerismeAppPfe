@@ -26,60 +26,54 @@ function TourDetails() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch tour details
+        // Fetch tour details - this should work for all users
         const tourResponse = await axios.get(`http://localhost:5000/voyages/${id}`);
         setTour(tourResponse.data);
 
-        // Fetch reviews if user is authenticated
+        // Only fetch reviews and check inscription status if user is authenticated
         if (isAuthenticated()) {
           const token = getToken();
-          if (!token) {
-            console.error('No token available');
-            return;
-          }
+          if (token) {
+            try {
+              // Fetch reviews
+              const reviewsResponse = await axios.get(`http://localhost:5000/avis/voyage/${id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+              setReviews(reviewsResponse.data.avis);
 
-          try {
-            const reviewsResponse = await axios.get(`http://localhost:5000/avis/voyage/${id}`, {
-              headers: { 'Authorization': `Bearer ${token}` }
-            });
-            setReviews(reviewsResponse.data.avis);
+              // Check if user can review
+              const inscriptionResponse = await axios.get(`http://localhost:5000/inscription/user`, {
+                headers: { 
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                }
+              });
 
-            // Check if user can review
-            const inscriptionResponse = await axios.get(`http://localhost:5000/inscription/user`, {
-              headers: { 
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
+              if (inscriptionResponse.data && inscriptionResponse.data.inscriptions) {
+                const userInscription = inscriptionResponse.data.inscriptions.find(
+                  ins => ins.voyage && ins.voyage._id === id && ins.statut === 'Accepté'
+                );
+                setCanReview(!!userInscription);
+                
+                // Check if user has already reviewed
+                const hasUserReviewed = reviewsResponse.data.avis.some(
+                  review => review.utilisateur && review.utilisateur._id === userInscription?.utilisateur?._id
+                );
+                setHasReviewed(hasUserReviewed);
               }
-            });
-
-            if (inscriptionResponse.data && inscriptionResponse.data.inscriptions) {
-              const userInscription = inscriptionResponse.data.inscriptions.find(
-                ins => ins.voyage && ins.voyage._id === id && ins.statut === 'Accepté'
-              );
-              setCanReview(!!userInscription);
-              
-              // Check if user has already reviewed
-              const hasUserReviewed = reviewsResponse.data.avis.some(
-                review => review.utilisateur && review.utilisateur._id === userInscription?.utilisateur?._id
-              );
-              setHasReviewed(hasUserReviewed);
+            } catch (err) {
+              console.error('Error fetching reviews or checking inscription:', err);
+              if (err.response?.status === 401) {
+                navigate('/login');
+              }
+              setCanReview(false);
             }
-          } catch (err) {
-            console.error('Error checking inscription status:', err);
-            if (err.response?.status === 401) {
-              // Token is invalid or expired
-              navigate('/login');
-            }
-            setCanReview(false);
           }
         }
 
         setLoading(false);
       } catch (err) {
-        const errorMessage = err.response?.status === 401
-          ? 'Please login to view reviews'
-          : 'Failed to fetch tour details';
-        setError(errorMessage);
+        setError('Failed to fetch tour details');
         setLoading(false);
       }
     };
@@ -91,16 +85,22 @@ function TourDetails() {
   const handleBooking = async () => {
     if (bookingInProgress) return;
 
+    if (!isAuthenticated()) {
+      alert('You need an account to make a booking. Please login or create an account.');
+      navigate('/login');
+      return;
+    }
+
+    const token = getToken();
+    if (!token) {
+      alert('Your session has expired. Please login again.');
+      navigate('/login');
+      return;
+    }
+
     try {
       setBookingInProgress(true);
       
-      if (!isAuthenticated()) {
-        alert('Please login to make a booking');
-        navigate('/login');
-        return;
-      }
-
-      const token = getToken();
       const response = await axios.post('http://localhost:5000/inscription', {
         voyageId: id,
         nombrePersonnes: guestCount
@@ -117,12 +117,15 @@ function TourDetails() {
       }
     } catch (err) {
       console.error('Booking error:', err);
-      const errorMessage = err.response?.data?.message || err.message || 'Error making booking';
-      alert(`Booking failed: ${errorMessage}`);
       
       if (err.response?.status === 401) {
+        alert('Your session has expired. Please login again.');
         navigate('/login');
+        return;
       }
+
+      const errorMessage = err.response?.data?.message || 'Error making booking. Please try again.';
+      alert(errorMessage);
     } finally {
       setBookingInProgress(false);
     }
@@ -197,6 +200,33 @@ function TourDetails() {
     return '★'.repeat(Math.floor(rating)) + '☆'.repeat(5 - Math.floor(rating));
   };
 
+  // Helper function to get emoji for activity
+  const getActivityEmoji = (activity) => {
+    const emojiMap = {
+      'Beach Fun': '🏖️',
+      'Cultural & Heritage': '🏛️',
+      'Adventure & Nature': '🏔️',
+      'City Exploration': '🌆',
+      'Food & Culinary': '🍽️',
+      'Shopping': '🛍️',
+      'Nightlife': '🌃',
+      'Relaxation & Wellness': '🧘',
+      'Sports & Recreation': '⚽',
+      'Photography': '📸',
+      'Local Experiences': '👥',
+      'Wildlife & Safari': '🦁',
+      'Water Sports': '🏄',
+      'Hiking & Trekking': '🥾',
+      'Museum & Art': '🎨',
+      'Theme Parks': '🎢',
+      'Cruise & Boat Tours': '🚢',
+      'Festivals & Events': '🎉',
+      'Religious Sites': '⛪',
+      'Historical Tours': '🏰'
+    };
+    return emojiMap[activity] || '🎯'; // Default emoji if category not found
+  };
+
   // Loading and error states
   if (loading) return <div className="text-center py-10">Loading...</div>;
   if (error) return <div className="text-center py-10 text-red-500">{error}</div>;
@@ -246,6 +276,24 @@ function TourDetails() {
             </p>
           </div>
 
+          {/* Activities */}
+          {tour.activities && tour.activities.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-xl font-semibold mb-4">Included Activities</h2>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {tour.activities.map((activity, index) => (
+                  <div
+                    key={index}
+                    className="bg-blue-50 p-4 rounded-lg flex items-center gap-3"
+                  >
+                    <span className="text-blue-600 text-xl">{getActivityEmoji(activity)}</span>
+                    <span className="text-gray-700 font-medium">{activity}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Travel Dates */}
           <div className="mb-8">
             <h2 className="text-xl font-semibold mb-4">Travel Dates</h2>
@@ -277,15 +325,17 @@ function TourDetails() {
           <div className="mt-12">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold">Customer Reviews</h2>
-              <div className="flex items-center">
-                <span className="text-yellow-400 text-xl">{renderStars(averageRating)}</span>
-                <span className="text-gray-600 ml-2">
-                  {averageRating} ({reviews.length} reviews)
-                </span>
-              </div>
+              {reviews.length > 0 && (
+                <div className="flex items-center">
+                  <span className="text-yellow-400 text-xl">{renderStars(averageRating)}</span>
+                  <span className="text-gray-600 ml-2">
+                    {averageRating} ({reviews.length} reviews)
+                  </span>
+                </div>
+              )}
             </div>
 
-            {error === 'Please login to view reviews' ? (
+            {!isAuthenticated() ? (
               <div className="text-center py-4 bg-gray-50 rounded-lg">
                 <p className="text-gray-600 mb-2">Please login to view and submit reviews</p>
                 <button 
@@ -298,7 +348,7 @@ function TourDetails() {
             ) : (
               <>
                 {/* Add Review Form */}
-                {isAuthenticated() && canReview && !hasReviewed && (
+                {canReview && !hasReviewed && (
                   <form onSubmit={handleSubmitReview} className="mb-8 bg-gray-50 p-4 rounded-lg">
                     <h3 className="font-semibold mb-4">Add Your Review</h3>
                     <div className="mb-4">
@@ -334,13 +384,13 @@ function TourDetails() {
                   </form>
                 )}
 
-                {isAuthenticated() && canReview && hasReviewed && (
+                {canReview && hasReviewed && (
                   <div className="mb-8 bg-green-50 p-4 rounded-lg">
                     <p className="text-green-700">You have already reviewed this tour.</p>
                   </div>
                 )}
 
-                {isAuthenticated() && !canReview && (
+                {!canReview && (
                   <div className="mb-8 bg-yellow-50 p-4 rounded-lg">
                     <p className="text-yellow-700">You need to have an accepted booking to leave a review.</p>
                   </div>
@@ -385,27 +435,29 @@ function TourDetails() {
               <span className="text-xl">${tour.prix}/Per Person</span>
             </div>
 
-            {/* Guest Count */}
-            <div className="mb-6">
-              <label className="block text-gray-700 mb-2">No. Of Guest</label>
-              <div className="flex items-center gap-4">
-                <button 
-                  onClick={() => setGuestCount(Math.max(1, guestCount - 1))}
-                  className="bg-gray-200 px-3 py-1 rounded"
-                  disabled={guestCount <= 1}
-                >
-                  -
-                </button>
-                <span>{guestCount} adults</span>
-                <button 
-                  onClick={() => setGuestCount(Math.min(tour.placesDisponible, guestCount + 1))}
-                  className="bg-gray-200 px-3 py-1 rounded"
-                  disabled={guestCount >= tour.placesDisponible}
-                >
-                  +
-                </button>
+            {/* Guest Count - Only show if user is authenticated */}
+            {isAuthenticated() && (
+              <div className="mb-6">
+                <label className="block text-gray-700 mb-2">No. Of Guest</label>
+                <div className="flex items-center gap-4">
+                  <button 
+                    onClick={() => setGuestCount(Math.max(1, guestCount - 1))}
+                    className="bg-gray-200 px-3 py-1 rounded"
+                    disabled={guestCount <= 1}
+                  >
+                    -
+                  </button>
+                  <span>{guestCount} adults</span>
+                  <button 
+                    onClick={() => setGuestCount(Math.min(tour.placesDisponible, guestCount + 1))}
+                    className="bg-gray-200 px-3 py-1 rounded"
+                    disabled={guestCount >= tour.placesDisponible}
+                  >
+                    +
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Status */}
             <div className="mb-6">
@@ -415,30 +467,44 @@ function TourDetails() {
               </span>
             </div>
 
-            {/* Subtotal */}
-            <div className="border-t border-gray-200 pt-4 mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-gray-600">Subtotal:</span>
-                <span className="text-xl font-bold">{tour.prix * guestCount} DH</span>
+            {/* Subtotal - Only show if user is authenticated */}
+            {isAuthenticated() && (
+              <div className="border-t border-gray-200 pt-4 mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-gray-600">Subtotal:</span>
+                  <span className="text-xl font-bold">{tour.prix * guestCount} DH</span>
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Book Now Button */}
-            <button 
-              onClick={handleBooking}
-              disabled={tour.placesDisponible <= 0 || bookingInProgress}
-              className={`w-full py-3 rounded-lg font-semibold transition duration-300 ${
-                tour.placesDisponible > 0 && !bookingInProgress 
-                  ? 'bg-yellow-400 text-black hover:bg-yellow-500' 
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }`}
-            >
-              {bookingInProgress 
-                ? 'Processing...' 
-                : tour.placesDisponible > 0 
-                  ? 'Confirm Booking' 
-                  : 'Tour Full'}
-            </button>
+            {/* Book Now Button or Login Prompt */}
+            {isAuthenticated() ? (
+              <button 
+                onClick={handleBooking}
+                disabled={tour.placesDisponible <= 0 || bookingInProgress}
+                className={`w-full py-3 rounded-lg font-semibold transition duration-300 ${
+                  tour.placesDisponible > 0 && !bookingInProgress 
+                    ? 'bg-yellow-400 text-black hover:bg-yellow-500' 
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                {bookingInProgress 
+                  ? 'Processing...' 
+                  : tour.placesDisponible > 0 
+                    ? 'Confirm Booking' 
+                    : 'Tour Full'}
+              </button>
+            ) : (
+              <div className="text-center">
+                <p className="text-gray-600 mb-4">Please login to make a booking</p>
+                <button 
+                  onClick={() => navigate('/login')}
+                  className="w-full py-3 rounded-lg font-semibold bg-blue-600 text-white hover:bg-blue-700 transition duration-300"
+                >
+                  Login to Book
+                </button>
+              </div>
+            )}
 
             {/* Share */}
             <div className="mt-6 flex items-center gap-2">

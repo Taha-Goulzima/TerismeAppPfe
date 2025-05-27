@@ -184,6 +184,33 @@ const AssociationDashboard = () => {
         }
     };
 
+    const renderStars = (rating) => {
+        return '★'.repeat(Math.floor(rating)) + '☆'.repeat(5 - Math.floor(rating));
+    };
+
+    // Helper function to get emoji for activity
+    const getActivityEmoji = (activity) => {
+        const emojiMap = {
+            'Beach Fun': '🏖️',
+            'Cultural & Heritage': '🏛️',
+            'Adventure & Nature': '🏔️',
+            'Nightlife & Party': '🌃',
+            'Relaxation & Wellness': '🧘',
+            'Eco & Sustainable Tourism': '🌱',
+            'Food & Drink Experiences': '🍽️',
+            'Winter & Snow Adventures': '❄️',
+            'Entertainment & Events': '🎉',
+            'Desert & Safari': '🐪',
+            'Art & Creativity': '🎨',
+            'Luxury Experiences': '✨',
+            'Island & Cruise Experiences': '🚢',
+            'Sports & Fitness': '⚽',
+            'Exclusive Tours': '👑',
+            'Family-Friendly': '👨‍👩‍👧‍👦'
+        };
+        return emojiMap[activity] || '🎯';
+    };
+
     if (loading) {
         return <div className="flex justify-center items-center h-screen">Loading...</div>;
     }
@@ -247,6 +274,7 @@ const AssociationDashboard = () => {
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Departure</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Return</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Places</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Activities</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                             </tr>
                         </thead>
@@ -273,6 +301,19 @@ const AssociationDashboard = () => {
                                         {new Date(voyage.dateDeRetour).toLocaleDateString()}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">{voyage.placesDisponible}</td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex flex-wrap gap-2">
+                                            {voyage.activities && voyage.activities.map((activity, index) => (
+                                                <span
+                                                    key={index}
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-gradient-to-r from-blue-50 to-blue-100 text-blue-800 border border-blue-200 shadow-sm hover:shadow-md transition-all duration-200"
+                                                >
+                                                    <span className="text-base">{getActivityEmoji(activity)}</span>
+                                                    <span>{activity}</span>
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         {association.status === 'active' && (
                                             <>
@@ -404,6 +445,8 @@ const AssociationDashboard = () => {
                             <form onSubmit={(e) => {
                                 e.preventDefault();
                                 const formData = new FormData(e.target);
+                                const activities = formData.getAll('activityCategory').filter(category => category !== '');
+                                
                                 handleAddVoyage({
                                     destination: formData.get('destination'),
                                     prix: formData.get('prix'),
@@ -411,7 +454,8 @@ const AssociationDashboard = () => {
                                     dateDeRetour: formData.get('dateDeRetour'),
                                     placesDisponible: formData.get('placesDisponible'),
                                     photo: formData.get('photo'),
-                                    description: formData.get('description')
+                                    description: formData.get('description'),
+                                    activities: activities
                                 });
                             }} className="space-y-6">
                                 <div className="grid grid-cols-2 gap-4">
@@ -498,6 +542,64 @@ const AssociationDashboard = () => {
                                     />
                                 </div>
 
+                                {/* Activities Section */}
+                                <div className="bg-gray-50 rounded-lg p-6">
+                                    <div className="flex justify-between items-center mb-6">
+                                        <div>
+                                            <h3 className="text-lg font-semibold text-gray-900">Activities</h3>
+                                            <p className="text-sm text-gray-500 mt-1">Select activities included in this tour</p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const activitiesContainer = document.getElementById('activitiesContainer');
+                                                const activityDiv = document.createElement('div');
+                                                activityDiv.className = 'activity-entry bg-white rounded-lg shadow-sm p-4 mb-3 transition-all duration-200 hover:shadow-md';
+                                                activityDiv.innerHTML = `
+                                                    <div class="flex items-center justify-between">
+                                                        <div class="flex-1">
+                                                            <select name="activityCategory" required class="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
+                                                                <option value="">Select activity type</option>
+                                                                <option value="Beach Fun">🏖️ Beach Fun</option>
+                                                                <option value="Cultural & Heritage">🏛️ Cultural & Heritage</option>
+                                                                <option value="Adventure & Nature">🏔️ Adventure & Nature</option>
+                                                                <option value="Nightlife & Party">🌃 Nightlife & Party</option>
+                                                                <option value="Relaxation & Wellness">🧘 Relaxation & Wellness</option>
+                                                                <option value="Eco & Sustainable Tourism">🌱 Eco & Sustainable Tourism</option>
+                                                                <option value="Food & Drink Experiences">🍽️ Food & Drink Experiences</option>
+                                                                <option value="Winter & Snow Adventures">❄️ Winter & Snow Adventures</option>
+                                                                <option value="Entertainment & Events">🎉 Entertainment & Events</option>
+                                                                <option value="Desert & Safari">🐪 Desert & Safari</option>
+                                                                <option value="Art & Creativity">🎨 Art & Creativity</option>
+                                                                <option value="Luxury Experiences">✨ Luxury Experiences</option>
+                                                                <option value="Island & Cruise Experiences">🚢 Island & Cruise Experiences</option>
+                                                                <option value="Sports & Fitness">⚽ Sports & Fitness</option>
+                                                                <option value="Exclusive Tours">👑 Exclusive Tours</option>
+                                                                <option value="Family-Friendly">👨‍👩‍👧‍👦 Family-Friendly</option>
+                                                            </select>
+                                                        </div>
+                                                        <button type="button" class="ml-3 text-red-500 hover:text-red-700 transition-colors duration-200" onclick="this.closest('.activity-entry').remove()">
+                                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+                                                `;
+                                                activitiesContainer.appendChild(activityDiv);
+                                            }}
+                                            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                                        >
+                                            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                            </svg>
+                                            Add Activity
+                                        </button>
+                                    </div>
+                                    <div id="activitiesContainer" className="space-y-3">
+                                        {/* Activities will be added here dynamically */}
+                                    </div>
+                                </div>
+
                                 <div className="flex justify-end gap-4 mt-8">
                                     <button
                                         type="button"
@@ -547,6 +649,8 @@ const AssociationDashboard = () => {
                             <form onSubmit={(e) => {
                                 e.preventDefault();
                                 const formData = new FormData(e.target);
+                                const activities = formData.getAll('activityCategory').filter(category => category !== '');
+                                
                                 handleEditVoyage({
                                     destination: formData.get('destination'),
                                     prix: formData.get('prix'),
@@ -554,7 +658,8 @@ const AssociationDashboard = () => {
                                     dateDeRetour: formData.get('dateDeRetour'),
                                     placesDisponible: formData.get('placesDisponible'),
                                     photo: formData.get('photo'),
-                                    description: formData.get('description')
+                                    description: formData.get('description'),
+                                    activities: activities
                                 });
                             }} className="space-y-6">
                                 <div className="grid grid-cols-2 gap-4">
@@ -646,6 +751,104 @@ const AssociationDashboard = () => {
                                         className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                                         placeholder="Enter voyage description"
                                     />
+                                </div>
+
+                                {/* Edit Modal Activities Section */}
+                                <div className="bg-gray-50 rounded-lg p-6">
+                                    <div className="flex justify-between items-center mb-6">
+                                        <div>
+                                            <h3 className="text-lg font-semibold text-gray-900">Activities</h3>
+                                            <p className="text-sm text-gray-500 mt-1">Select activities included in this tour</p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const activitiesContainer = document.getElementById('editActivitiesContainer');
+                                                const activityDiv = document.createElement('div');
+                                                activityDiv.className = 'activity-entry bg-white rounded-lg shadow-sm p-4 mb-3 transition-all duration-200 hover:shadow-md';
+                                                activityDiv.innerHTML = `
+                                                    <div class="flex items-center justify-between">
+                                                        <div class="flex-1">
+                                                            <select name="activityCategory" required class="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
+                                                                <option value="">Select activity type</option>
+                                                                <option value="Beach Fun">🏖️ Beach Fun</option>
+                                                                <option value="Cultural & Heritage">🏛️ Cultural & Heritage</option>
+                                                                <option value="Adventure & Nature">🏔️ Adventure & Nature</option>
+                                                                <option value="Nightlife & Party">🌃 Nightlife & Party</option>
+                                                                <option value="Relaxation & Wellness">🧘 Relaxation & Wellness</option>
+                                                                <option value="Eco & Sustainable Tourism">🌱 Eco & Sustainable Tourism</option>
+                                                                <option value="Food & Drink Experiences">🍽️ Food & Drink Experiences</option>
+                                                                <option value="Winter & Snow Adventures">❄️ Winter & Snow Adventures</option>
+                                                                <option value="Entertainment & Events">🎉 Entertainment & Events</option>
+                                                                <option value="Desert & Safari">🐪 Desert & Safari</option>
+                                                                <option value="Art & Creativity">🎨 Art & Creativity</option>
+                                                                <option value="Luxury Experiences">✨ Luxury Experiences</option>
+                                                                <option value="Island & Cruise Experiences">🚢 Island & Cruise Experiences</option>
+                                                                <option value="Sports & Fitness">⚽ Sports & Fitness</option>
+                                                                <option value="Exclusive Tours">👑 Exclusive Tours</option>
+                                                                <option value="Family-Friendly">👨‍👩‍👧‍👦 Family-Friendly</option>
+                                                            </select>
+                                                        </div>
+                                                        <button type="button" class="ml-3 text-red-500 hover:text-red-700 transition-colors duration-200" onclick="this.closest('.activity-entry').remove()">
+                                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+                                                `;
+                                                activitiesContainer.appendChild(activityDiv);
+                                            }}
+                                            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                                        >
+                                            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                            </svg>
+                                            Add Activity
+                                        </button>
+                                    </div>
+                                    <div id="editActivitiesContainer" className="space-y-3">
+                                        {selectedVoyage.activities && selectedVoyage.activities.map((activity, index) => (
+                                            <div key={index} className="activity-entry bg-white rounded-lg shadow-sm p-4 mb-3 transition-all duration-200 hover:shadow-md">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex-1">
+                                                        <select
+                                                            name="activityCategory"
+                                                            defaultValue={activity}
+                                                            required
+                                                            className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                                                        >
+                                                            <option value="">Select activity type</option>
+                                                            <option value="Beach Fun">🏖️ Beach Fun</option>
+                                                            <option value="Cultural & Heritage">🏛️ Cultural & Heritage</option>
+                                                            <option value="Adventure & Nature">🏔️ Adventure & Nature</option>
+                                                            <option value="Nightlife & Party">🌃 Nightlife & Party</option>
+                                                            <option value="Relaxation & Wellness">🧘 Relaxation & Wellness</option>
+                                                            <option value="Eco & Sustainable Tourism">🌱 Eco & Sustainable Tourism</option>
+                                                            <option value="Food & Drink Experiences">🍽️ Food & Drink Experiences</option>
+                                                            <option value="Winter & Snow Adventures">❄️ Winter & Snow Adventures</option>
+                                                            <option value="Entertainment & Events">🎉 Entertainment & Events</option>
+                                                            <option value="Desert & Safari">🐪 Desert & Safari</option>
+                                                            <option value="Art & Creativity">🎨 Art & Creativity</option>
+                                                            <option value="Luxury Experiences">✨ Luxury Experiences</option>
+                                                            <option value="Island & Cruise Experiences">🚢 Island & Cruise Experiences</option>
+                                                            <option value="Sports & Fitness">⚽ Sports & Fitness</option>
+                                                            <option value="Exclusive Tours">👑 Exclusive Tours</option>
+                                                            <option value="Family-Friendly">👨‍👩‍👧‍👦 Family-Friendly</option>
+                                                        </select>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        className="ml-3 text-red-500 hover:text-red-700 transition-colors duration-200"
+                                                        onClick={(e) => e.target.closest('.activity-entry').remove()}
+                                                    >
+                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
 
                                 <div className="flex justify-end gap-4 mt-8">

@@ -42,7 +42,29 @@ const voyageSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Association',
         required: true
-    }
+    },
+    activities: [{
+        type: String,
+        required: true,
+        enum: [
+            'Beach Fun',
+            'Cultural & Heritage',
+            'Adventure & Nature',
+            'Nightlife & Party',
+            'Relaxation & Wellness',
+            'Eco & Sustainable Tourism',
+            'Food & Drink Experiences',
+            'Winter & Snow Adventures',
+            'Entertainment & Events',
+            'Desert & Safari',
+            'Art & Creativity',
+            'Luxury Experiences',
+            'Island & Cruise Experiences',
+            'Sports & Fitness',
+            'Exclusive Tours',
+            'Family-Friendly'
+        ]
+    }]
 }, { timestamps: true });
 
 module.exports = mongoose.model('Voyage', voyageSchema);
